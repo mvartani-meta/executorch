@@ -35,18 +35,10 @@ jobs:
           - repo: "openai"
             name: "whisper-small"
           - repo: "openai"
-            name: "whisper-large-v3-turbo"
-          - repo: "google"
-            name: "gemma-3-4b-it"
-        quant:
-            - "non-quantized"
-            - "quantized-int4-weight-only"
-        exclude:
-          # TODO: enable int4-weight-only on gemma3.
-          - model:
-              repo: "google"
-              name: "gemma-3-4b-it"
-            quant: "quantized-int4-weight-only"
+              name: "whisper-large-v3-turbo"
+          quant:
+              - "non-quantized"
+              - "quantized-int4-weight-only"
     with:
       timeout: 90
       secrets-env: EXECUTORCH_HF_TOKEN
