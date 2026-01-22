@@ -186,3 +186,42 @@ TEST(BufferCleanupTest, Smoke) {
   // complaint.
   bc2.reset();
 }
+
+TEST_F(InputsTest, DoubleInputWrongSizeFails) {
+  MethodMeta method_meta = method_->method_meta();
+
+  // ModuleAdd has 3 inputs: tensor, tensor, double (alpha)
+  ASSERT_EQ(method_meta.num_inputs(), 3);
+
+  // Verify input 2 is a Double
+  auto tag = method_meta.input_tag(2);
+  ASSERT_TRUE(tag.ok());
+  ASSERT_EQ(tag.get(), Tag::Double);
+
+  // Create input_buffers with wrong size for the Double input
+  std::vector<std::pair<char*, size_t>> input_buffers;
+
+  // Allocate correct buffers for tensors (inputs 0 and 1)
+  auto tensor0_meta = method_meta.input_tensor_meta(0);
+  auto tensor1_meta = method_meta.input_tensor_meta(1);
+  ASSERT_TRUE(tensor0_meta.ok());
+  ASSERT_TRUE(tensor1_meta.ok());
+
+  std::vector<char> buf0(tensor0_meta->nbytes());
+  std::vector<char> buf1(tensor1_meta->nbytes());
+
+  // ModuleAdd expects alpha=1.0. Need to set this correctly, otherwise
+  // set_input fails validation before the buffer overflow happens.
+  double alpha = 1.0;
+  // Double is size 8; use a larger buffer to invoke overflow.
+  char large_buffer[16];
+  memcpy(large_buffer, &alpha, sizeof(double));
+
+  input_buffers.push_back({buf0.data(), buf0.size()});
+  input_buffers.push_back({buf1.data(), buf1.size()});
+  input_buffers.push_back({large_buffer, sizeof(large_buffer)});
+
+  Result<BufferCleanup> result =
+      prepare_input_tensors(*method_, {}, input_buffers);
+  EXPECT_EQ(result.error(), Error::InvalidArgument);
+}
